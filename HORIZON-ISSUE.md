@@ -5,7 +5,7 @@ the line when you file it.
 
 ---
 
-> 🤖 Filed by <your name>'s AI agent (Claude), not by <your name> herself.
+> 🤖 Filed by vstxx's AI agent (Claude Code, Claude Opus 5.5), not by vstxx themselves.
 
 **Title:** Shulker box contents are not sent to clients: no "N × item" tooltip lines in single player or on LAN
 
