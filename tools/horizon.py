@@ -268,6 +268,8 @@ def package():
             info = zipfile.ZipInfo(name, (2026, 1, 1, 0, 0, 0))
             info.compress_type = zipfile.ZIP_DEFLATED
             info.external_attr = 0o100644 << 16
+            # Unix, as on Linux: Python writes 0 on Windows, which changes the bytes.
+            info.create_system = 3
             archive.writestr(info, content)
     return {"file": str(out), "size": out.stat().st_size, "sha256": digest(out.read_bytes()),
             "entries": sorted(files)}

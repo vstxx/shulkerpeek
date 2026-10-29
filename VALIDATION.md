@@ -16,7 +16,7 @@ commands used the launcher's features (`--features horizon-client/mods`).
 | `python tools/horizon.py test --with tests/native` | 22 passed inside the game: the 14 runtime tests and 5 parity tests in its binary, and 3 encoding tests in its library (below) |
 | `python tools/horizon.py build` | `horizon-client` and `horizon-ctl` in the `fast` profile, 0 warnings (115.6 s of Cargo for the final rebuild). |
 | `python tools/test_combined.py` | Builds with ShulkerPeek, all 6 official native mods (coords_hud, fps_overlay, keystrokes, minimap, recipes, zoom) and the tooltip probe: 34 injections and 10 modules. 0 warnings. The probe's HEAD runs before ShulkerPeek's cancellable one, in both the plan and the staged source. |
-| `python tools/horizon.py package` | `shulker_peek-0.1.0.hnmod`, 13670 bytes, SHA-256 `5f8d2709b0d701097f319a3fc836e774ad1d9dde0433ec540db8efc10084fc68`. The bytes are identical when packaged again. |
+| `python tools/horizon.py package` | `shulker_peek-0.1.0.hnmod`, 13670 bytes, SHA-256 `e4e33cb698d91042b2ed2f93a1c935f279d16d83988115d53c0f33530cabeab5`. The bytes are identical when packaged again, and identical to the package CI builds on Linux. |
 | `cargo horizon-mod check` (built from the pinned Horizon) | Accepted: `native-mod, format native-1/5e391eb…/0d6b103…, for 26.3` |
 
 The parity tests in `tests/native` run in the game and compare ShulkerPeek with Horizon's own code:
