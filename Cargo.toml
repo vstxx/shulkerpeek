@@ -1,0 +1,16 @@
+[package]
+name = "horizon-mod-shulker-peek"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+license = "MIT"
+publish = false
+description = "ShulkerPeek: a shulker box's contents as a 9 x 3 grid in its tooltip, a native Horizon mod."
+
+# The mod's logic and its tests: the same file the bundle adds to the game.
+[lib]
+path = "mixins/shulker_peek/runtime.rs"
+
+[workspace]
+members = ["tools/audit"]
+resolver = "2"

@@ -1,0 +1,5 @@
+# The Rust the Horizon launcher builds native mods with (launcher/src/rust_toolchain.rs).
+[toolchain]
+channel = "1.99.1"
+components = ["rustfmt", "clippy"]
+profile = "minimal"

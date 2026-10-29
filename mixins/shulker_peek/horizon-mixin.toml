@@ -1,0 +1,92 @@
+[mod]
+id = "shulker_peek"
+version = "0.1.0"
+priority = 100
+
+# Horizon Nightly 2026-10-29 (tag nightly-source/2026-10-29-5e391eb). The
+# tooltip hook is not one of the native hook points, so the mod builds on
+# this exact commit only.
+[compatibility]
+horizon_revision = "5e391eb67392941734df7ddd648728c4ed5302f6"
+
+[[module]]
+id = "runtime"
+file = "crates/horizon-client/src/game.rs"
+name = "shulker_peek"
+source = "runtime.rs"
+
+# Every item tooltip goes through `draw_stack_tooltip`. For a shulker box this
+# mod shows, the helper draws the whole tooltip and breaks; for anything else
+# it continues to Horizon's body. Its priority is the lowest so that every
+# other mod's HEAD hook on this method runs before it.
+[[injection]]
+id = "tooltip"
+kind = "HEAD"
+cancellable = true
+priority = -1000
+target = "horizon_client::game::stations::Game<'_>::draw_stack_tooltip"
+helper = "tooltip.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "batch", ty = "&mut horizon_client::hud::HudBatch", value = "&mut *batch" },
+  { name = "stack", ty = "&horizon_client::items::ItemStack", value = "stack" },
+  { name = "x", ty = "f32", value = "x" },
+  { name = "y", ty = "f32", value = "y" },
+]
+
+# Horizon's server leaves a shulker box's contents out of what it sends its
+# clients (`lan::guest::network_stack`), so in single player (the window is
+# a client of its server thread) and on LAN no tooltip has them. This module
+# and hook add them as a vanilla server sends them. `Hub::stack` holds a
+# closure, so HEAD is the only hook it takes; the helper calls `Hub::stack`
+# itself for the stack Horizon encodes, then adds the contents.
+[[module]]
+id = "sync"
+file = "crates/horizon-client/src/lan/hub.rs"
+name = "shulker_peek_sync"
+source = "sync.rs"
+visibility = "pub"
+
+[[injection]]
+id = "send"
+kind = "HEAD"
+cancellable = true
+priority = -1000
+target = "horizon_client::lan::hub::Hub::stack"
+helper = "send.rs"
+bindings = [
+  { name = "hub", ty = "&mut crate::lan::hub::Hub", value = "&mut *self" },
+  { name = "s", ty = "&Option<crate::items::ItemStack>", value = "s" },
+]
+
+[[injection]]
+id = "list"
+kind = "HEAD"
+target = "horizon_client::game::native_hooks::Game<'_>::native_mods"
+helper = "list.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "mods", ty = "&mut Vec<crate::game::native_hooks::NativeMod>", value = "&mut *mods" },
+]
+
+[[injection]]
+id = "settings"
+kind = "HEAD"
+target = "horizon_client::game::native_hooks::Game<'_>::native_settings"
+helper = "settings.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "mod_id", ty = "&str", value = "mod_id" },
+  { name = "buttons", ty = "&mut Vec<String>", value = "&mut *buttons" },
+]
+
+[[injection]]
+id = "click"
+kind = "HEAD"
+target = "horizon_client::game::native_hooks::Game<'_>::native_settings_click"
+helper = "click.rs"
+bindings = [
+  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
+  { name = "mod_id", ty = "&str", value = "mod_id" },
+  { name = "button", ty = "usize", value = "button" },
+]

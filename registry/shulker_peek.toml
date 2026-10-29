@@ -1,0 +1,36 @@
+# Draft entry for horizon-rust/horizon-mods: mods/shulker_peek.toml. Before submitting, fill in `authors`,
+# `owners` (GitHub logins) and `source` (the public repository this .hnmod was built from), refresh `sha256`
+# and `published` from `python tools/horizon.py package`, and upload the file as the PR template says.
+id = "shulker_peek"
+kind = "native-mod"
+name = "ShulkerPeek"
+summary = "A shulker box's contents as a 9 x 3 grid in its tooltip."
+description = """
+Hover a shulker box to see what is in it: its 27 slots as the box's own screen draws them, under the tooltip's
+usual lines.
+
+- The plain box and the 16 dyed ones, empty, partly filled or full; exact slot order, item models and counts.
+- Every screen with item tooltips: inventory, containers, creative, the item panel, chat, trading.
+- Respects `minecraft:tooltip_display` (hidden tooltips and a hidden `minecraft:container` stay hidden).
+- Settings: Options > Mods > ShulkerPeek > Settings (always or while holding Shift; empty boxes; the box's dye).
+- Works in normal single player and on LAN worlds you host. Horizon's server leaves a box's contents out of
+  what it sends its clients, so even Horizon's own "64 x Diamond" lines are missing there. ShulkerPeek sends
+  them as a vanilla server does.
+- Never changes an item, an inventory or a world.
+
+A native mod pinned to Horizon Nightly 2026-10-29 (`5e391eb`), because its hooks are not among the native hook
+points. Horizon's official native mods build together with it.
+"""
+authors = ["vstxx"]
+owners = ["vstxx"]
+license = "MIT"
+source = "https://github.com/vstxx/shulkerpeek"
+icon = "icons/shulker_peek.png"
+
+[[versions]]
+version = "0.1.0"
+published = "2026-10-29"
+game = "26.3"
+file = "shulker_peek-0.1.0.hnmod"
+sha256 = "5f8d2709b0d701097f319a3fc836e774ad1d9dde0433ec540db8efc10084fc68"
+changelog = "First release."

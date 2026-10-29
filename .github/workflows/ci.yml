@@ -1,0 +1,56 @@
+name: ShulkerPeek
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+env:
+  # The Rust the Horizon launcher builds native mods with (rust-toolchain.toml).
+  RUST: "1.99.1"
+jobs:
+  mod:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install $RUST --profile minimal --component rustfmt --component clippy
+      - run: cargo fmt --all --check
+      - name: Hook adapters are formatted too
+        run: rustfmt --edition 2024 --check mixins/shulker_peek/*.rs tests/*/*/*.rs
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
+      - run: cargo test --workspace --locked
+      - name: Package the .hnmod and check what it holds
+        run: |
+          python3 tools/horizon.py package
+          python3 - <<'PY'
+          import json, zipfile, glob
+          path, = glob.glob("target/*.hnmod")
+          names = zipfile.ZipFile(path).namelist()
+          manifest = json.loads(zipfile.ZipFile(path).read("horizon-native.json"))
+          assert "hooks" not in manifest, manifest
+          assert all(n == "horizon-native.json" or (n.startswith(f"mixins/{manifest['id']}/") and n.endswith((".rs", ".toml"))) for n in names), names
+          print(path, manifest)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hnmod
+          path: target/*.hnmod
+  horizon:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: rustup toolchain install $RUST --profile minimal && rustup toolchain install 1.95.0 --profile minimal
+      - run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config
+      - name: Pinned Horizon, horizon-mixins and the official native mods
+        run: |
+          rev() { python3 -c "import json; print(json.load(open('compatibility.json'))['$1'])"; }
+          git clone --filter=blob:none https://github.com/horizon-rust/horizon ../horizon
+          git -C ../horizon cat-file -e "$(rev horizon_revision)^{commit}"
+          git clone https://github.com/horizon-rust/horizon-mixins ../horizon-mixins
+          git -C ../horizon-mixins checkout "$(rev horizon_mixins_revision)"
+          git clone --depth 1 https://github.com/horizon-rust/horizon-mods ../horizon-mods
+      - name: Stage twice and audit the ASTs
+        run: python3 tools/test_stage.py --horizon ../horizon --mixins ../horizon-mixins
+      - name: The runtime's and the parity tests inside the real game
+        run: python3 tools/horizon.py test --horizon ../horizon --mixins ../horizon-mixins --with tests/native
+      - name: With Horizon's official native mods and a tooltip probe
+        run: python3 tools/test_combined.py --horizon ../horizon --mixins ../horizon-mixins --official ../horizon-mods/native
