@@ -7,9 +7,6 @@ fn shulker_peek_listed(
     use crate::game::shulker_peek as m;
     let game = &*game;
     m::load(|key| game.native_setting(m::ID, key));
-    let on = game.native_on(m::ID);
-    horizon_client::lan::hub::shulker_peek_sync::ENABLED
-        .store(on, std::sync::atomic::Ordering::Relaxed);
     mods.push(crate::game::native_hooks::NativeMod {
         id: m::ID.into(),
         title: format!("{} {}", m::NAME, m::VERSION),

@@ -1,7 +1,6 @@
 # A test-only bundle, never shipped: `python tools/horizon.py test --with
 # tests/native` adds it to the game, where its tests check ShulkerPeek's pure
-# parts against Horizon's own code. As a module of `game::stations` it can
-# call the private `tooltip_geometry`.
+# parts against Horizon's own code.
 [mod]
 id = "shulker_peek_parity"
 version = "0.0.0"

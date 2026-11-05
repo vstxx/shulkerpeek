@@ -3,9 +3,10 @@ id = "shulker_peek"
 version = "0.1.1"
 priority = 100
 
-# Horizon Nightly 2026-11-05 (tag nightly-source/2026-11-05-f319701). The
-# tooltip hook is not one of the native hook points, so the mod builds on
-# this exact commit only.
+# The commit it was tested on: Horizon Nightly 2026-11-05 (tag
+# nightly-source/2026-11-05-f319701). It hooks only native hook points
+# (`hooks` in compatibility.json), so the launcher builds it on any Horizon
+# that has them.
 [compatibility]
 horizon_revision = "f319701e8c9ab657ff562250b3ba07b2d654e3bc"
 
@@ -15,48 +16,53 @@ file = "crates/horizon-client/src/game.rs"
 name = "shulker_peek"
 source = "runtime.rs"
 
-# Every item tooltip goes through `draw_stack_tooltip`. For a shulker box this
-# mod shows, the helper draws the whole tooltip and breaks; for anything else
-# it continues to Horizon's body. Its priority is the lowest so that every
-# other mod's HEAD hook on this method runs before it.
+# The game-side half of the mod: whether a stack's tooltip shows the grid,
+# asked by both tooltip hooks so they always agree.
+[[module]]
+id = "peek"
+file = "crates/horizon-client/src/game.rs"
+name = "shulker_peek_game"
+source = "peek.rs"
+
+# Horizon's tooltip hook points (`tooltip_component` and
+# `tooltip_component_draw`): Horizon lays the tooltip out with room for the
+# grid under its lines, draws the box and the lines, then asks the mod to draw
+# the grid there. ShulkerPeek asks last (lowest priority) and keeps any other
+# mod's component.
 [[injection]]
-id = "tooltip"
+id = "component"
 kind = "HEAD"
-cancellable = true
 priority = -1000
-target = "horizon_client::game::stations::Game<'_>::draw_stack_tooltip"
-helper = "tooltip.rs"
+target = "horizon_client::game::native_hooks::Game<'_>::native_tooltip_component"
+helper = "component.rs"
 bindings = [
-  { name = "game", ty = "&mut crate::game::Game<'_>", value = "&mut *self" },
-  { name = "batch", ty = "&mut horizon_client::hud::HudBatch", value = "&mut *batch" },
+  { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
   { name = "stack", ty = "&horizon_client::items::ItemStack", value = "stack" },
-  { name = "x", ty = "f32", value = "x" },
-  { name = "y", ty = "f32", value = "y" },
+  { name = "size", ty = "&mut Option<[f32; 2]>", value = "&mut *size" },
 ]
 
-# Horizon's server leaves a shulker box's contents out of what it sends its
-# clients (`lan::guest::network_stack`), so in single player (the window is
-# a client of its server thread) and on LAN no tooltip has them. This module
-# and hook add them as a vanilla server sends them. `Hub::stack` holds a
-# closure, so HEAD is the only hook it takes; the helper calls `Hub::stack`
-# itself for the stack Horizon encodes, then adds the contents.
-[[module]]
-id = "sync"
-file = "crates/horizon-client/src/lan/hub.rs"
-name = "shulker_peek_sync"
-source = "sync.rs"
-visibility = "pub"
-
 [[injection]]
-id = "send"
+id = "draw"
 kind = "HEAD"
-cancellable = true
-priority = -1000
-target = "horizon_client_lib::lan::hub::Hub::stack"
-helper = "send.rs"
+target = "horizon_client::game::native_hooks::Game<'_>::native_tooltip_component_draw"
+helper = "draw.rs"
 bindings = [
-  { name = "hub", ty = "&mut crate::lan::hub::Hub", value = "&mut *self" },
-  { name = "s", ty = "&Option<crate::items::ItemStack>", value = "s" },
+  { name = "game", ty = "&crate::game::Game<'_>", value = "self" },
+  { name = "stack", ty = "&horizon_client::items::ItemStack", value = "stack" },
+  { name = "batch", ty = "&mut horizon_client::hud::HudBatch", value = "&mut *batch" },
+  { name = "origin", ty = "[f32; 2]", value = "origin" },
+  { name = "size", ty = "[f32; 2]", value = "size" },
+]
+
+# The input hook point `key`: Shift for the "while holding Shift" setting.
+[[injection]]
+id = "key"
+kind = "HEAD"
+target = "horizon_client::game::native_hooks::Game<'_>::native_key"
+helper = "key.rs"
+bindings = [
+  { name = "key", ty = "&str", value = "key" },
+  { name = "pressed", ty = "bool", value = "pressed" },
 ]
 
 [[injection]]

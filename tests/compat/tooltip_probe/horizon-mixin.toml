@@ -1,6 +1,6 @@
-# A test-only bundle, never shipped: another mod's HEAD hook on the method
-# ShulkerPeek hooks, at an ordinary priority. tools/test_combined.py checks it
-# runs before ShulkerPeek's (so a shulker box's tooltip never skips it) and
+# A test-only bundle, never shipped: another mod's HEAD hook on the tooltip
+# hook point ShulkerPeek answers, at an ordinary priority. tools/test_combined.py
+# checks it runs before ShulkerPeek's (so a component it sets is kept) and
 # that the game builds with both and Horizon's official native mods.
 [mod]
 id = "tooltip_probe"
@@ -19,6 +19,6 @@ source = "runtime.rs"
 [[injection]]
 id = "seen"
 kind = "HEAD"
-target = "horizon_client::game::stations::Game<'_>::draw_stack_tooltip"
+target = "horizon_client::game::native_hooks::Game<'_>::native_tooltip_component"
 helper = "seen.rs"
 bindings = [{ name = "stack", ty = "&horizon_client::items::ItemStack", value = "stack" }]
