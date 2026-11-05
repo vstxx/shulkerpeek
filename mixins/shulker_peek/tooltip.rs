@@ -58,7 +58,7 @@ fn shulker_peek_tooltip(
         .map(|(t, _)| atlas.font.width_text(t))
         .fold(0.0, f32::max);
     let at = m::layout(text_w, lines.len(), (x, y), (batch.width, batch.height));
-    crate::game::Game::tooltip_box(batch, atlas, at.x, at.y, at.w, at.h);
+    game.tooltip_box(batch, Some(stack), at.x, at.y, at.w, at.h);
     crate::game::Game::tooltip_text(batch, atlas, &lines, at.x, at.y);
     let [gx, gy] = at.grid;
     let tint = m::tint(&stack.item).filter(|_| settings.dyed);

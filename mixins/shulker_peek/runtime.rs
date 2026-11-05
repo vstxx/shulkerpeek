@@ -10,7 +10,7 @@ use std::sync::atomic::{AtomicU8, Ordering};
 /// version.
 pub const ID: &str = "shulker_peek";
 pub const NAME: &str = "ShulkerPeek";
-pub const VERSION: &str = "0.1.0";
+pub const VERSION: &str = "0.1.1";
 pub const DESCRIPTION: &str =
     "A shulker box's contents as a 9 x 3 grid in its tooltip, as the box's own screen shows them.";
 

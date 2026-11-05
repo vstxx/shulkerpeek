@@ -1,13 +1,13 @@
 [mod]
 id = "shulker_peek"
-version = "0.1.0"
+version = "0.1.1"
 priority = 100
 
-# Horizon Nightly 2026-10-29 (tag nightly-source/2026-10-29-5e391eb). The
+# Horizon Nightly 2026-11-05 (tag nightly-source/2026-11-05-f319701). The
 # tooltip hook is not one of the native hook points, so the mod builds on
 # this exact commit only.
 [compatibility]
-horizon_revision = "5e391eb67392941734df7ddd648728c4ed5302f6"
+horizon_revision = "f319701e8c9ab657ff562250b3ba07b2d654e3bc"
 
 [[module]]
 id = "runtime"
@@ -52,7 +52,7 @@ id = "send"
 kind = "HEAD"
 cancellable = true
 priority = -1000
-target = "horizon_client::lan::hub::Hub::stack"
+target = "horizon_client_lib::lan::hub::Hub::stack"
 helper = "send.rs"
 bindings = [
   { name = "hub", ty = "&mut crate::lan::hub::Hub", value = "&mut *self" },

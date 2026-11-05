@@ -43,6 +43,16 @@ pub fn send(hub: &mut Hub, s: &Option<ItemStack>) -> ControlFlow<Option<Stack>> 
     }
     ENCODING.set(true);
     let base = hub.stack(s);
+    // Newer Horizon (Nightly 2026-11-05, `f319701`) sends the contents itself
+    // (`lan::guest::network_stack`): its encoding goes out as it is, so the
+    // component is never sent twice.
+    if base
+        .as_ref()
+        .is_some_and(|b| b.added.iter().any(|(c, _)| *c == component::CONTAINER))
+    {
+        ENCODING.set(false);
+        return ControlFlow::Break(base);
+    }
     let entries: Vec<(u8, Option<Stack>)> = data
         .container
         .iter()
