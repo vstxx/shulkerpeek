@@ -44,12 +44,15 @@ def main():
                        for i in plan["injections"])
         assert kinds == [
             ("click", "native_settings_click", False, 100),
+            ("component", "native_tooltip_component", False, -1000),
+            ("draw", "native_tooltip_component_draw", False, 100),
+            ("key", "native_key", False, 100),
             ("list", "native_mods", False, 100),
-            ("send", "stack", True, -1000),
             ("settings", "native_settings", False, 100),
-            ("tooltip", "draw_stack_tooltip", True, -1000),
         ], kinds
-        assert sorted(m["name"] for m in plan["modules"]) == [horizon.MOD_ID, f"{horizon.MOD_ID}_sync"]
+        # Every injection is on a native hook point.
+        assert all("::native_hooks::" in i["target"] for i in plan["injections"]), plan["injections"]
+        assert sorted(m["name"] for m in plan["modules"]) == [horizon.MOD_ID, f"{horizon.MOD_ID}_game"]
         audit(first["original"], first["stage"], first["plan"])
     assert subprocess.check_output(["git", "-C", str(clone), "status", "--porcelain"]) == status
     assert subprocess.check_output(["git", "-C", str(clone), "rev-parse", "HEAD"]) == head

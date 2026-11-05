@@ -16,10 +16,8 @@ box's own screen.
   the advanced-tooltip lines. The grid goes below them.
 - Honours `minecraft:tooltip_display`. When the tooltip is hidden (`hide_tooltip`), or `minecraft:container` is
   among its hidden components, ShulkerPeek leaves the tooltip to Horizon.
-- Fixes a Horizon gap so the grid works in normal play. Horizon's server leaves a shulker box's contents out of
-  what it sends to its clients, and in single player the window is one of those clients. ShulkerPeek adds the
-  contents back the way a vanilla server sends them, so the grid (and Horizon's own "item × count" lines)
-  appear in single player and for everyone on a world you open to LAN.
+- Built only on Horizon's stable native hook points, so the launcher builds it on any Horizon whose hook API is at
+  least the one it needs, with no re-release for each Nightly.
 - Never changes an item, an inventory or a world, and sends nothing to a server.
 
 Not made or endorsed by the Horizon project or by Mojang.
@@ -28,16 +26,16 @@ Not made or endorsed by the Horizon project or by Mojang.
 
 | | |
 |---|---|
-| Horizon | Nightly 2026-10-29, commit `5e391eb67392941734df7ddd648728c4ed5302f6` (tag `nightly-source/2026-10-29-5e391eb`) |
-| horizon-mixins | `0d6b103c70633d8fd9443d8d0acd3aadaacedb06` (0.5.0, plan schema 5; the launcher's `MIXINS_REV`) |
+| Horizon | hook API 313 or later (`"hooks": 313`); tested on Nightly 2026-11-05, commit `f319701e8c9ab657ff562250b3ba07b2d654e3bc` (tag `nightly-source/2026-11-05-f319701`) |
+| horizon-mixins | `e8cd0aa38cffef49cb2e088ef716baa107148c02` (plan schema 6; the launcher's `MIXINS_REV`) |
 | Minecraft | 26.3 |
 | Rust | 1.99.1 (the launcher's native-mod toolchain) |
 
-ShulkerPeek hooks a tooltip method that is **not** one of Horizon's stable native hook points, so it builds only
-on the commit above. That is why its `.hnmod` has no `hooks` field. Every native mod in one build has to pin the
-same commit. Horizon's official native mods (FPS Counter, Zoom, Keystrokes, Minimap, Recipes, Coordinates HUD)
-use only the hook points, so the launcher builds them on ShulkerPeek's commit with no change. A third-party mod
-that pins a different commit can't be built together with ShulkerPeek until one of the two is re-released.
+ShulkerPeek hooks only Horizon's native hook points (`native_tooltip_component`, `native_tooltip_component_draw`,
+`native_key` and the Options → Mods ones), which Horizon keeps stable across releases. Its `.hnmod` names the hook
+API it needs (`"hooks": 313`, for `native_item_stack`) instead of pinning a commit, so the launcher builds it on the
+Horizon you play, together with Horizon's official native mods and any other mod; the commit above is only the one
+it was tested on.
 
 ## Install
 
@@ -46,7 +44,7 @@ Native mods are native code with your user's rights. Install them only from auth
 - **From the registry** (once it is listed): in the Horizon launcher, open the Mods page and install
   ShulkerPeek, then click **Build**. The first native build downloads Rust and takes 20 to 30 minutes; later
   builds are faster.
-- **From a file**: run `python tools/horizon.py package` (it writes `target/shulker_peek-0.1.0.hnmod`), unpack
+- **From a file**: run `python tools/horizon.py package` (it writes `target/shulker_peek-0.1.1.hnmod`), unpack
   it, then run
   `horizon-launcher native-build path/to/unpacked --trust-native-code`.
 
@@ -70,103 +68,66 @@ These are saved as one file per key in `horizon-mods/.horizon-mod-data/shulker_p
 
 ## How it works
 
-Every item tooltip in Horizon goes through one method,
-`horizon_client::game::stations::Game<'_>::draw_stack_tooltip`. ShulkerPeek adds a **cancellable HEAD** hook
-there (`mixins/shulker_peek/tooltip.rs`):
+Horizon's item tooltips have a hook point for an image under the lines (vanilla's `ClientTooltipComponent`, as
+bundles use): `native_tooltip_component` asks for its size, and Horizon lays the tooltip out with room for it
+(`tooltip_geometry`, kept on screen), draws the box and the lines, then calls `native_tooltip_component_draw` with
+the corner to draw at. ShulkerPeek answers both:
 
-1. If the stack isn't a shulker box, or the mod is off, it returns `Continue`. The cost is one `ends_with` and
-   one set lookup.
-2. It also returns `Continue` and leaves the tooltip to Horizon when any of these is true:
-   - the stack's tooltip hides `minecraft:container`;
-   - the stack also has bundle contents;
-   - the Shift setting is on and Shift isn't held;
-   - the box is empty and empty grids are off.
-3. Otherwise it builds the tooltip itself, from Horizon's own pieces:
-   - the lines: `stack_tooltip` and `resolved`;
-   - the box and the text: `tooltip_box` and `tooltip_text`;
-   - the items: `draw_item`, drawn by reference.
+1. `component.rs` reserves 162 × 54 for a shulker box whose contents show. It answers last (priority −1000) and
+   keeps a component another mod already set.
+2. `draw.rs` draws the grid there: the slot area (162 × 54 at (7, 17)) of `gui/container/shulker_box`, the box
+   screen's own texture, so a resource pack's look carries over (tinted with a dyed box's colour when the setting
+   asks), then each item with `native_item_stack` and its count with `native_text`, as a slot draws them.
 
-   The box is sized and placed as in `tooltip_geometry`, at least as wide as the grid and taller by the grid's
-   height. The grid's background is the slot area (162 × 54 at (7, 17)) of `gui/container/shulker_box`, the box
-   screen's own texture, so a resource pack's look carries over. Then the hook returns `Break`.
+Both ask `peek.rs` the same question, so they always agree. A box keeps Horizon's own tooltip when any of these
+is true:
 
-### Sending the contents (`send.rs`, `sync.rs`)
+- the mod is off;
+- the stack's tooltip hides `minecraft:container`;
+- the stack also has bundle contents;
+- the Shift setting is on and Shift isn't held (`key.rs` follows Shift through the `native_key` hook point);
+- the box is empty and empty grids are off.
 
-Horizon's server encodes items for its clients in `lan::guest::network_stack`. That function writes damage,
-enchantments, names, bundle contents and more, but not `minecraft:container`. The client already decodes the
-component (`item_sync.rs`); it just never receives it. Horizon's own tooltip lines are missing for the same
-reason. The problem is still there in the newest Nightly (`a491181`).
-
-ShulkerPeek adds a cancellable HEAD hook on `horizon_client::lan::hub::Hub::stack`, the server's encoding for
-its clients. This method holds a closure, so HEAD is the only hook kind it accepts. The hook works like this:
-
-1. For anything that isn't a shulker box with contents, it returns `Continue`, and Horizon encodes the stack as
-   usual.
-2. For such a box, it first calls `Hub::stack` itself (with a guard against re-entry), so the stack is exactly
-   what Horizon encodes.
-3. It then appends the contents in `ItemContainerContents.STREAM_CODEC` form: one optional item template per slot.
-4. Finally it returns `Break`.
-
-It sends nothing while the mod is off, and it also skips boxes whose `tooltip_display` hides their contents,
-because Horizon's server doesn't send `tooltip_display` either. Tests encode boxes this way and decode them with
-the client's real decoder (`item_sync::from_network`). The proper fix belongs in Horizon:
-[HORIZON-ISSUE.md](HORIZON-ISSUE.md) is a ready bug report with the patch. Once Horizon fixes it, this hook can
-be removed.
+Horizon's server sends a box's contents to its clients itself since Nightly 2026-11-05, so the grid and Horizon's
+own "item × count" lines show in single player and on LAN with nothing more from the mod.
 
 ### Testable logic
 
 The work that doesn't depend on the game lives in `runtime.rs`. It is plain Rust, unit-tested on its own and
-inside the game's test binary. It covers slot normalization, layout, texture coordinates, dye tints and settings.
-Three more HEAD hooks use the stable hook points `native_mods`, `native_settings` and `native_settings_click` for
-the Options → Mods row and the settings page.
-
-### Why a cancellable HEAD hook
-
-The tooltip box has to be wider and taller to hold the grid, and its size is computed inside
-`draw_stack_tooltip` → `tooltip_geometry`. The pinned horizon-mixins planner rejects every hook kind that could
-change that from the inside (AFTER_CALL, RETURN, MODIFY_CONSTANT and similar) with `E_UNSUPPORTED_CONTROL_FLOW`,
-because both methods contain closures. This was checked against the real export; see VALIDATION.md. HEAD is the
-only kind those methods accept.
-
-To keep the cancellation narrow:
-
-- It breaks only for a shulker box it actually draws. Every other stack runs Horizon's own method unchanged.
-- The hook has priority −1000, so every other mod's HEAD hook on this method (default priority 100) runs before
-  it, even for shulker boxes. `tools/test_combined.py` checks this order.
-- When it breaks, it skips only the rest of Horizon's body for that frame. The body is the lines, box, text and
-  bundle drawing, all of which ShulkerPeek reproduces with the same functions.
+inside the game's test binary. It covers slot normalization, texture coordinates, dye tints, Shift and settings.
+Three more HEAD hooks use the hook points `native_mods`, `native_settings` and `native_settings_click` for the
+Options → Mods row and the settings page.
 
 ### Edge cases
 
 - **Slot data.** Slots are placed the way vanilla fills a box (`ItemContainerContents.fromSlots`, then
   `copyInto`): a later entry for a slot replaces an earlier one. Slots outside 0–26 and empty stacks show
   nothing. At most 256 entries are read, which is vanilla's codec limit.
-- **Screen edges.** The box flips left of the cursor near the right edge and moves up from the bottom edge.
-  Tests cover GUI scales 1 to 4 on a 1920 × 1080 window and the minimum 320 × 240 GUI.
+- **Screen edges.** Horizon places the tooltip, grid included, as it places every tooltip: left of the cursor near
+  the right edge and up from the bottom edge.
 - **Resource packs.** A pack with a larger texture maps the same slots, because texture coordinates are fractions
   of the texture. If a pack has no `gui/container/shulker_box`, the grid uses plain slot squares instead.
 - **Multiplayer.** A client knows a box's contents only if its server sends the `minecraft:container`
   component:
-  - **Single player and a LAN world you host:** your game is the server, so ShulkerPeek sends it. Guests see
-    the grid too if they have the mod.
+  - **Single player and a LAN world you host:** Horizon's own server sends it. Guests see the grid too if they
+    have the mod.
   - **Vanilla Java servers:** they send it, so the grid works.
-  - **Another Horizon server without ShulkerPeek:** it doesn't send it. The box looks empty, as it does in
+  - **A Horizon server older than Nightly 2026-11-05:** it doesn't send it. The box looks empty, as it does in
     Horizon's own tooltip, and no grid is shown unless "Show the empty grid" is on.
 
   The mod never asks a server for anything.
 
 ## Performance
 
-- **Any item that isn't a shulker box:** one string-suffix check, then Horizon's own method.
-- **A shulker box ShulkerPeek draws:** one 27-slot normalization with no allocation, one layout, one sprite and
-  up to 27 `draw_item` calls. Nothing is cloned. NBT isn't decoded on this path, because Horizon decodes the
-  container component when the item arrives. Settings come from an atomic, not from a file.
-- **Compared with Horizon's own body:** the mod skips the bundle-layout probe and does the same
-  `stack_tooltip` work.
-- **Measured** (`cargo test --release -- --ignored --nocapture`): about 18.5 ns per frame for the mod's own
-  normalization, layout and slot walk on a full box, on an i7-14650HX. That excludes the drawing calls the game
-  makes anyway.
-- **Idle cost:** none. There is no per-tick or per-frame hook, and nothing runs in the background.
+- **Any item that isn't a shulker box:** one string-suffix check in each tooltip hook, and nothing else.
+- **A shulker box ShulkerPeek draws:** one 27-slot normalization with no allocation in each of the two hooks, one
+  sprite and up to 27 `native_item_stack` calls. Nothing is cloned. NBT isn't decoded on this path, because Horizon
+  decodes the container component when the item arrives. Settings and Shift come from atomics, not from a file.
+- **Measured** (`cargo test --release -- --ignored --nocapture`): about 21 ns per hook per frame for the
+  normalization and slot walk on a full box, on an i9-11900. That excludes the drawing calls the game makes
+  anyway.
+- **Idle cost:** a string comparison per key press for Shift; nothing per tick or per frame, and nothing in the
+  background.
 
 ## Develop and verify
 
@@ -184,7 +145,7 @@ commit, and is never checked out.
 ```sh
 git clone https://github.com/horizon-rust/horizon ../horizon
 git clone https://github.com/horizon-rust/horizon-mixins ../horizon-mixins
-git -C ../horizon-mixins checkout 0d6b103c70633d8fd9443d8d0acd3aadaacedb06
+git -C ../horizon-mixins checkout e8cd0aa38cffef49cb2e088ef716baa107148c02
 git clone https://github.com/horizon-rust/horizon-mods ../horizon-mods   # only for test_combined
 
 cargo fmt --all --check
@@ -196,7 +157,7 @@ python tools/horizon.py check --horizon ../horizon      # cargo check the real h
 python tools/horizon.py test  --horizon ../horizon --with tests/native   # runtime + parity tests in the game
 python tools/horizon.py build --horizon ../horizon      # fast profile: horizon-client + horizon-ctl
 python tools/test_combined.py --horizon ../horizon --official ../horizon-mods/native
-python tools/horizon.py package                         # target/shulker_peek-0.1.0.hnmod
+python tools/horizon.py package                         # target/shulker_peek-0.1.1.hnmod
 ```
 
 Everything generated goes under `target/`. Use `--target-dir` to share a Cargo target directory between runs.
@@ -210,24 +171,25 @@ fresh temporary `HORIZON_HOME`, `HORIZON_LAUNCHER_HOME`, `XDG_DATA_HOME` and `XD
 2. Run
    `horizon-ctl command 'give @s minecraft:red_shulker_box[minecraft:container=[{slot:0,item:{id:"minecraft:diamond",count:64}},{slot:13,item:{id:"minecraft:apple",count:5}},{slot:26,item:{id:"minecraft:stone"}}]]'`.
 3. Run `horizon-ctl open-inventory`.
-4. Hover over the box. `drag-at` from outside the window to the slot's centre (from `horizon-ctl screen`)
-   leaves the cursor there.
+4. Hover over the box. In survival, `click-at` the slot's centre (from `horizon-ctl ui`), wait a second so it
+   isn't a double click, and `click-at` it again: the box goes back and the cursor stays over it.
 5. Run `horizon-ctl screenshot shot.png`.
 
 ## Layout
 
 ```text
 mixins/shulker_peek/      the bundle (all of the .hnmod but its manifest)
-  horizon-mixin.toml      pin, 2 support modules, 5 HEAD injections
+  horizon-mixin.toml      2 modules, 6 HEAD injections, all on native hook points
   runtime.rs              shared, tested logic: the Cargo library and crate::game::shulker_peek
-  tooltip.rs              the tooltip hook (cancellable HEAD)
-  send.rs sync.rs         the server sends a box's contents to its clients (cancellable HEAD, lib module)
+  peek.rs                 whether a stack's tooltip shows the grid (crate::game::shulker_peek_game)
+  component.rs draw.rs    the tooltip component: its size, then the grid (native_tooltip_component[_draw])
+  key.rs                  Shift for the "while holding Shift" setting (native_key)
   list.rs settings.rs click.rs   Options → Mods row and settings page (native hook points)
-compatibility.json        exact revisions and the SHA-256 of each Horizon file the bundle changes
+compatibility.json        the hook API it needs, the tested revisions and the SHA-256 of the Horizon files it reads
 tools/horizon.py          export → plan → apply → check/test/build, and package
-tools/test_stage.py       determinism, unchanged clone, AST audit (tools/audit)
+tools/test_stage.py       determinism, unchanged clone, hook points only, AST audit (tools/audit)
 tools/test_combined.py    with the official native mods and tests/compat/tooltip_probe
-tests/native/             test-only bundle: layout vs Horizon's tooltip_geometry, slots vs its decoder
+tests/native/             test-only bundle: slots and visibility vs Horizon's decoder
 ```
 
 ## License and attribution

@@ -26,7 +26,7 @@ jobs:
           path, = glob.glob("target/*.hnmod")
           names = zipfile.ZipFile(path).namelist()
           manifest = json.loads(zipfile.ZipFile(path).read("horizon-native.json"))
-          assert "hooks" not in manifest, manifest
+          assert manifest.get("hooks") == json.load(open("compatibility.json")).get("hooks"), manifest
           assert all(n == "horizon-native.json" or (n.startswith(f"mixins/{manifest['id']}/") and n.endswith((".rs", ".toml"))) for n in names), names
           print(path, manifest)
           PY

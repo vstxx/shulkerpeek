@@ -1,3 +1,6 @@
+> **Fixed in Horizon:** since Nightly 2026-11-05 (`f319701`), `lan::guest::network_stack` sends a shulker box's
+> `minecraft:container` itself, and ShulkerPeek 0.1.1 no longer adds it. Kept for the record.
+
 # Draft bug report for horizon-rust/horizon
 
 Horizon's AGENTS.md asks that an issue written by an agent say so on its first line. Fill in the name and keep

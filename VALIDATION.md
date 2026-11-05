@@ -1,5 +1,41 @@
 # Validation
 
+## 0.1.1: Nightly 2026-11-05 and the native hook points
+
+Run on 2026-11-05 on Linux (CachyOS, Intel i9-11900, NVIDIA RTX 3060) with Rust 1.99.1. Horizon was
+`f319701e8c9ab657ff562250b3ba07b2d654e3bc` (Nightly 2026-11-05), exported with `git archive` from a clone that was
+never checked out or modified. horizon-mixins was `e8cd0aa38cffef49cb2e088ef716baa107148c02` (plan schema 6),
+built with its own pinned Rust 1.95.0. Horizon no longer has a `horizon-client/mods` feature (native mods are
+always built in), so the tools pass it only to a Horizon that still has it.
+
+| Check | Result |
+|---|---|
+| `cargo fmt --all --check`; `rustfmt --edition 2024 --check mixins/shulker_peek/*.rs tests/*/*/*.rs` | Pass |
+| `cargo clippy --workspace --all-targets --locked -- -D warnings` | Pass |
+| `cargo test --workspace --locked` | 12 passed, 1 ignored (the measurement: about 21 ns per hook per frame) |
+| `python tools/test_stage.py` | A repeated stage keeps all bytes and mtimes; the Horizon clone's status and HEAD are unchanged; all 6 injections are on `native_hooks`; the AST audit passes. |
+| `python tools/horizon.py test --with tests/native` | 16 passed inside the game: the runtime tests and the parity tests |
+| `python tools/test_combined.py` | Builds with ShulkerPeek, all of Horizon's official native mods and the tooltip probe, 0 warnings. The probe's `native_tooltip_component` HEAD runs before ShulkerPeek's, in the plan and in the staged source. |
+| `python tools/horizon.py package` | `shulker_peek-0.1.1.hnmod` with `"hooks": 313` |
+| The launcher's own build, with 8 other native mods (AppleSkin, Freecam+, Fullbright & NoFog, Horizonmatica, JEI, Light Overlay, Minimap, Zoom) | Builds, 0 warnings |
+
+In game (that build, driven with `horizon-ctl` on a headless gamescope display at 1280 × 720, survival, a fresh
+temporary `HORIZON_HOME`):
+
+- Options → Mods lists "ShulkerPeek 0.1.1: ON"; its three settings buttons change and save `show`, `empty` and
+  `color`.
+- Hovering a red box with 64 diamonds in slot 0, a diamond sword in slot 4, 5 apples in slot 13 and stone in
+  slot 26: Horizon's tooltip with its lines ("64 × Diamond", "1 × Diamond Sword", "5 × Apple", "1 × Stone",
+  sent by Horizon's own server now), and under them the 9 × 3 grid with each item in its slot and the counts.
+- "Grid colour: The box's dye": the grid is tinted red. "Empty boxes: Show the empty grid": an empty plain box
+  shows the empty grid.
+- "Show contents: While holding Shift": no grid until Shift is held; the grid shows while it is held and goes
+  again when it is let go.
+
+Not exercised: other container screens, other GUI scales, resource packs, LAN guests and remote servers.
+
+## 0.1.0
+
 Run on 2026-10-29 on Windows 11 (Intel i7-14650HX, 24 threads), with MSVC build tools and Rust 1.99.1 (the
 launcher's native-mod toolchain). Horizon was `5e391eb67392941734df7ddd648728c4ed5302f6` (Nightly
 2026-10-29), exported with `git archive` from a clone that was never checked out or modified. horizon-mixins

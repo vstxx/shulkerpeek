@@ -13,19 +13,26 @@ usual lines.
 - Every screen with item tooltips: inventory, containers, creative, the item panel, chat, trading.
 - Respects `minecraft:tooltip_display` (hidden tooltips and a hidden `minecraft:container` stay hidden).
 - Settings: Options > Mods > ShulkerPeek > Settings (always or while holding Shift; empty boxes; the box's dye).
-- Works in normal single player and on LAN worlds you host. Horizon's server leaves a box's contents out of
-  what it sends its clients, so even Horizon's own "64 x Diamond" lines are missing there. ShulkerPeek sends
-  them as a vanilla server does.
+- Works in single player, on LAN worlds and on vanilla servers: wherever the server sends a box's contents (Horizon's
+  own server does since Nightly 2026-11-05).
 - Never changes an item, an inventory or a world.
 
-A native mod pinned to Horizon Nightly 2026-10-29 (`5e391eb`), because its hooks are not among the native hook
-points. Horizon's official native mods build together with it.
+A native mod on Horizon's native hook points only (`"hooks": 313`), so the launcher builds it on the Horizon you
+play, together with Horizon's official native mods and other mods; tested on Nightly 2026-11-05 (`f319701`).
 """
 authors = ["vstxx"]
 owners = ["vstxx"]
 license = "MIT"
 source = "https://github.com/vstxx/shulkerpeek"
 icon = "icons/shulker_peek.png"
+
+[[versions]]
+version = "0.1.1"
+published = "2026-11-05"
+game = "26.3"
+file = "shulker_peek-0.1.1.hnmod"
+sha256 = "35d0ae3a9547141d884c725abc9ada4aef0528c1e5f0d344c81a64b21381deab"
+changelog = "Builds on Horizon Nightly 2026-11-05 and later: only native hook points now (the tooltip component), so no pinned commit. Horizon now sends a box's contents itself."
 
 [[versions]]
 version = "0.1.0"

@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """ShulkerPeek together with other native mods, as a player's set: Horizon's official native mods (a clone of
 horizon-rust/horizon-mods: native/*) and the test-only tooltip probe (tests/compat), which hooks the same tooltip
-method. Checks that the combined plan runs the probe's hook before ShulkerPeek's cancellable one, that the staged
-source has them in that order, and that the real horizon-client binary type-checks with every mod applied.
+hook point. Checks that the combined plan runs the probe's hook before ShulkerPeek's, that the staged source has
+them in that order, and that the real horizon-client binary type-checks with every mod applied.
 
     python tools/test_combined.py --horizon ../horizon --official ../horizon-mods/native [--target-dir DIR]
 """
@@ -13,7 +13,7 @@ from pathlib import Path
 
 import horizon
 
-TARGET = "horizon_client::game::stations::Game<'_>::draw_stack_tooltip"
+TARGET = "horizon_client::game::native_hooks::Game<'_>::native_tooltip_component"
 
 
 def main():
@@ -30,13 +30,13 @@ def main():
         staged = horizon.stage(args.horizon.resolve(), horizon.mixins_root(args.mixins), extra)
     plan = json.loads(Path(staged["plan"]).read_text())
     order = [(i["mod_id"], i["injection_id"]) for i in plan["injections"] if i["target"] == TARGET]
-    assert order == [("tooltip_probe", "seen"), ("shulker_peek", "tooltip")], order
-    stations = (staged["stage"] / "crates/horizon-client/src/game/stations.rs").read_text()
-    body = stations[stations.index("pub(super) fn draw_stack_tooltip("):]
-    calls = re.findall(r"^\s+(tooltip_probe_seen|shulker_peek_tooltip)\(", body, re.M)[:2]
-    assert calls == ["tooltip_probe_seen", "shulker_peek_tooltip"], calls
+    assert order == [("tooltip_probe", "seen"), ("shulker_peek", "component")], order
+    hooks = (staged["stage"] / "crates/horizon-client/src/game/native_hooks.rs").read_text()
+    body = hooks[hooks.index("pub(super) fn native_tooltip_component("):]
+    calls = re.findall(r"^\s+(tooltip_probe_seen|shulker_peek_component)\(", body, re.M)[:2]
+    assert calls == ["tooltip_probe_seen", "shulker_peek_component"], calls
     report, result = horizon.cargo("check", staged["stage"], args.target_dir.resolve(),
-                                   ["--features", "horizon-client/mods"])
+                                   horizon.mods_feature(staged["stage"]))
     warnings = len(re.findall(r"^warning", result.stderr, re.M))
     summary = {"mods": staged["mods"].split("+"), "injections": staged["injections"],
                "modules": staged["modules"], "tooltip_hook_order": order, "warnings": warnings, **report}

@@ -1,48 +1,12 @@
-// ShulkerPeek against Horizon's own code, inside the game's test binary:
-// the layout against `tooltip_geometry`, and the slots and visibility against
-// stacks decoded by Horizon from saved item data.
+// ShulkerPeek against Horizon's own code, inside the game's test binary: the
+// slots and visibility against stacks decoded by Horizon from saved item data.
+// (Horizon lays the tooltip out itself through the `tooltip_component` hook
+// point, so there is no layout of the mod's own to check.)
 #[cfg(test)]
 mod tests {
-    use crate::game::{Game, shulker_peek as m};
-    use horizon_client::{
-        hud::HudAtlas, item_tooltip::TooltipDisplay, items::ItemStack, text::Text,
-    };
+    use crate::game::shulker_peek as m;
+    use horizon_client::{item_tooltip::TooltipDisplay, items::ItemStack};
     use horizon_world::nbt::Tag;
-
-    fn atlas() -> HudAtlas {
-        HudAtlas::build(std::path::Path::new("/nonexistent/horizon-test-assets")).unwrap()
-    }
-
-    /// The tooltip box is Horizon's, as tall as the text plus the grid and
-    /// its 2-pixel gap, wherever the cursor and whatever the GUI size.
-    #[test]
-    fn layout_is_horizons_tooltip_geometry_with_the_grid() {
-        let atlas = atlas();
-        for count in [1usize, 2, 6] {
-            let lines: Vec<(Text, u32)> = (0..count)
-                .map(|i| (Text::literal("W".repeat(40 + i)), u32::MAX))
-                .collect();
-            let text_w = lines
-                .iter()
-                .map(|(t, _)| atlas.font.width_text(t))
-                .fold(0.0, f32::max);
-            // Wider than the grid, so that neither minimum width applies.
-            assert!(text_w > m::GRID_W, "{text_w}");
-            for screen in [(427.0, 240.0), (320.0, 240.0), (1920.0, 1080.0)] {
-                for cursor in [(0.0, 0.0), (200.0, 120.0), screen, (screen.0 - 50.0, 10.0)] {
-                    let extra = m::GRID_H + 2.0;
-                    let geometry = Game::tooltip_geometry(&atlas, &lines, cursor, screen, extra);
-                    let l = m::layout(text_w, count, cursor, screen);
-                    assert_eq!(
-                        (l.x, l.y, l.w, l.h),
-                        geometry,
-                        "{count} {screen:?} {cursor:?}"
-                    );
-                    assert_eq!(l.grid[1] + m::GRID_H, l.y + l.h);
-                }
-            }
-        }
-    }
 
     fn entry(slot: i32, id: &str, count: i32) -> Tag {
         let item = Tag::compound([("id", Tag::String(id.into())), ("count", Tag::Int(count))]);
@@ -159,6 +123,6 @@ mod tests {
         let (grid, contents) = slots_of(&stack);
         let (slot, e) = grid.occupied().next().unwrap();
         assert_eq!(slot, 4);
-        assert_eq!(contents[e].1.custom_name(), Some("Edge"));
+        assert_eq!(contents[e].1.custom_name().as_deref(), Some("Edge"));
     }
 }

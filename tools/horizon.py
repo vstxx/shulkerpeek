@@ -230,10 +230,17 @@ def stage(horizon, mixins, extra=()):
             "injections": report["injections"], "modules": report["modules"]}
 
 
+def mods_feature(staged):
+    """`--features horizon-client/mods` where the staged Horizon still has that feature; newer Horizon builds native
+    mods in without one."""
+    manifest = tomllib.loads((Path(staged) / "crates" / "horizon-client" / "Cargo.toml").read_text())
+    return ["--features", "horizon-client/mods"] if "mods" in manifest.get("features", {}) else []
+
+
 def cargo(action, staged, target, features):
     command = ["cargo", action, "--locked", "-p", "horizon-client", "--bin", "horizon-client", *features]
     if action == "test":
-        # The sync module's tests are in the game's library, the rest in its binary.
+        # Run the tests in both the game's library and its binary.
         command.insert(5, "--lib")
     if action == "build":
         command += ["--bin", "horizon-ctl", "--profile", "fast"]
@@ -257,6 +264,10 @@ def package():
         raise ValueError(f"horizon-mixin.toml pins {pinned}, compatibility.json {PIN}")
     manifest = {"schema": 1, "id": MOD_ID, "version": VERSION, "game": COMPAT["game"], "horizon": PIN,
                 "mixins": MIXINS_PIN}
+    # On the native hook points only: the launcher builds it on any Horizon with at least this hook API, and PIN is
+    # just the commit it was tested on.
+    if "hooks" in COMPAT:
+        manifest["hooks"] = COMPAT["hooks"]
     files = {"horizon-native.json": (json.dumps(manifest, indent=2, sort_keys=True) + "\n").encode()}
     for path in sorted(BUNDLE.iterdir()):
         if path.suffix in (".rs", ".toml"):
@@ -300,7 +311,7 @@ def main():
               "staging_seconds": round(time.monotonic() - started, 1),
               **{k: str(v) if isinstance(v, Path) else v for k, v in staged.items()}}
     if args.action != "stage":
-        features = [] if args.no_mods_feature else ["--features", "horizon-client/mods"]
+        features = [] if args.no_mods_feature else mods_feature(staged["stage"])
         if args.no_default_features:
             features.append("--no-default-features")
         result_report, result = cargo(args.action, staged["stage"], target, features)

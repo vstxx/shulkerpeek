@@ -1,16 +1,17 @@
 // ShulkerPeek: a shulker box's contents as a 9 x 3 grid in its tooltip, under
 // the lines Horizon already shows. This file is both the mod's Cargo library
 // (its tests) and the `crate::game::shulker_peek` module the bundle adds to the
-// game, so it uses plain Rust types only: the hook adapters in `tooltip.rs`,
-// `list.rs`, `settings.rs` and `click.rs` turn the game's types into these.
+// game, so it uses plain Rust types only: the hook adapters (`component.rs`,
+// `draw.rs`, `key.rs`, `list.rs`, `settings.rs`, `click.rs`) and `peek.rs`
+// turn the game's types into these.
 
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU8, Ordering};
 
 /// The mod's id (its settings folder and its row in Options > Mods), name and
 /// version.
 pub const ID: &str = "shulker_peek";
 pub const NAME: &str = "ShulkerPeek";
-pub const VERSION: &str = "0.1.0";
+pub const VERSION: &str = "0.1.1";
 pub const DESCRIPTION: &str =
     "A shulker box's contents as a 9 x 3 grid in its tooltip, as the box's own screen shows them.";
 
@@ -29,6 +30,9 @@ pub const GRID_H: f32 = ROWS as f32 * SLOT;
 pub const TEXTURE: &str = "gui/container/shulker_box";
 pub const TEXTURE_SIZE: f32 = 256.0;
 pub const TEXTURE_REGION: [f32; 4] = [7.0, 17.0, GRID_W, GRID_H];
+/// A slot's square when the resource pack has no box screen to draw from,
+/// as ARGB (vanilla's slot grey).
+pub const SLOT_FALLBACK_ARGB: u32 = 0xFF8B_8B8B;
 /// Entries read from a container component: vanilla's codec refuses more
 /// (`ItemContainerContents.CODEC`, `sizeLimitedListOf(256)`); a malformed
 /// list longer than that is cut here rather than walked.
@@ -72,51 +76,6 @@ impl Grid {
     }
     pub fn is_empty(&self) -> bool {
         self.slots.iter().all(Option::is_none)
-    }
-}
-
-/// Where the tooltip goes: its text's top-left corner and the box's size
-/// (as Horizon's `tooltip_geometry` gives them), and the grid's top-left
-/// corner, under the text.
-#[derive(Clone, Copy, Debug, PartialEq)]
-pub struct Layout {
-    pub x: f32,
-    pub y: f32,
-    pub w: f32,
-    pub h: f32,
-    pub grid: [f32; 2],
-}
-
-/// The tooltip of `lines` lines at most `text_w` wide, for the cursor at
-/// `cursor` on a GUI of `screen` pixels, with the grid under the text.
-/// Horizon's `tooltip_geometry` (`DefaultTooltipPositioner`), the box at
-/// least as wide as the grid and as much taller as it, plus the 2 pixels
-/// a bundle's contents get: right of the cursor, or left of it when it
-/// would leave the screen; up from the bottom edge, never above the top.
-pub fn layout(text_w: f32, lines: usize, cursor: (f32, f32), screen: (f32, f32)) -> Layout {
-    let w = text_w.max(GRID_W);
-    let text_h = if lines <= 1 {
-        8.0
-    } else {
-        8.0 + 2.0 + (lines - 1) as f32 * 10.0
-    };
-    let h = text_h + 2.0 + GRID_H;
-    let (width, height) = screen;
-    let mut x = cursor.0 + 12.0;
-    let mut y = cursor.1 - 12.0;
-    if x + w > width - 4.0 {
-        x = (x - 28.0 - w).max(4.0);
-    }
-    if y + h + 3.0 > height {
-        y = height - h - 3.0;
-    }
-    y = y.max(4.0);
-    Layout {
-        x,
-        y,
-        w,
-        h,
-        grid: [x, y + text_h + 2.0],
     }
 }
 
@@ -166,6 +125,24 @@ pub fn tint(item: &str) -> Option<[u8; 3]> {
     let &(_, rgb) = DYES.iter().find(|d| d.0 == name)?;
     let lighten = |c: u32| (255 - (255 - (c & 0xFF)) / 2) as u8;
     Some([lighten(rgb >> 16), lighten(rgb >> 8), lighten(rgb)])
+}
+
+/// Whether each Shift key is held (left, right), from the `key` hook point.
+static SHIFT: [AtomicBool; 2] = [AtomicBool::new(false), AtomicBool::new(false)];
+
+/// A key went down or up (`native_key`'s vanilla name): keeps track of Shift.
+pub fn shift_key(key: &str, pressed: bool) {
+    let side = match key {
+        "key.keyboard.left.shift" => 0,
+        "key.keyboard.right.shift" => 1,
+        _ => return,
+    };
+    SHIFT[side].store(pressed, Ordering::Relaxed);
+}
+
+/// Whether either Shift key is held.
+pub fn shift_held() -> bool {
+    SHIFT.iter().any(|s| s.load(Ordering::Relaxed))
 }
 
 /// What the player chose on the mod's settings page.
@@ -362,76 +339,34 @@ mod tests {
         assert_eq!(item_offset(26), [145.0, 37.0]);
     }
 
-    #[test]
-    fn layout_matches_horizons_tooltip_beside_the_cursor() {
-        // A one-line name narrower than the grid: the box takes the grid's width.
-        let l = layout(40.0, 1, (100.0, 50.0), (427.0, 240.0));
-        assert_eq!((l.x, l.y, l.w), (112.0, 38.0, GRID_W));
-        assert_eq!(l.h, 8.0 + 2.0 + GRID_H);
-        assert_eq!(l.grid, [112.0, 48.0]);
-        // Three lines: the first is spaced (8 + 2), then 10 each.
-        let l = layout(200.0, 3, (100.0, 50.0), (427.0, 240.0));
-        assert_eq!(l.w, 200.0);
-        assert_eq!(l.grid[1] - l.y, 8.0 + 2.0 + 20.0 + 2.0);
-    }
-
-    #[test]
-    fn layout_stays_on_screen_at_every_gui_scale() {
-        // A 1920 x 1080 window at GUI scales 1 to 4, and a small one.
-        let screens = [
-            (1920.0, 1080.0),
-            (960.0, 540.0),
-            (640.0, 360.0),
-            (480.0, 270.0),
-            (320.0, 240.0),
-        ];
-        for screen in screens {
-            for cursor in [
-                (0.0, 0.0),
-                (screen.0, screen.1),
-                (screen.0 - 1.0, 5.0),
-                (3.0, screen.1 - 2.0),
-            ] {
-                for lines in [1, 4, 8] {
-                    let l = layout(120.0, lines, cursor, screen);
-                    assert!(
-                        l.x >= 4.0 && l.x + l.w <= screen.0 - 4.0,
-                        "{screen:?} {cursor:?} {l:?}"
-                    );
-                    assert!(
-                        l.y >= 4.0 && l.y + l.h + 3.0 <= screen.1,
-                        "{screen:?} {cursor:?} {l:?}"
-                    );
-                    assert!(l.grid[1] + GRID_H <= l.y + l.h);
-                }
-            }
-        }
-    }
-
     /// The mod's own work per frame while a full box's tooltip shows:
     /// `cargo test --release -- --ignored --nocapture`.
     #[test]
     #[ignore]
-    fn measure_normalize_and_layout() {
+    fn measure_normalize() {
         let entries: Vec<(u8, bool)> = (0..27u8).rev().map(|slot| (slot, true)).collect();
         let rounds = 1_000_000u32;
         let started = std::time::Instant::now();
         let mut sum = 0usize;
-        for i in 0..rounds {
+        for _ in 0..rounds {
             let grid = Grid::new(std::hint::black_box(&entries).iter().copied());
-            let cursor = (f32::from((i % 400) as u16), 50.0);
-            let l = layout(std::hint::black_box(120.0), 6, cursor, (427.0, 240.0));
-            sum += grid.occupied().map(|(s, e)| s ^ e).sum::<usize>() + l.x as usize;
+            sum += grid.occupied().map(|(s, e)| s ^ e).sum::<usize>();
         }
         let ns = started.elapsed().as_nanos() as f64 / f64::from(rounds);
-        println!("normalize 27 slots + layout + slot walk: {ns:.1} ns per frame ({sum})");
+        println!("normalize 27 slots + slot walk: {ns:.1} ns per frame ({sum})");
     }
 
     #[test]
-    fn layout_flips_left_at_the_right_edge_and_rises_from_the_bottom() {
-        let l = layout(10.0, 1, (400.0, 230.0), (427.0, 240.0));
-        assert_eq!(l.x, 400.0 + 12.0 - 28.0 - GRID_W);
-        assert_eq!(l.y + l.h + 3.0, 240.0);
+    fn shift_is_held_while_either_shift_key_is_down() {
+        assert!(!shift_held());
+        shift_key("key.keyboard.left.shift", true);
+        shift_key("key.keyboard.right.shift", true);
+        shift_key("key.keyboard.a", true);
+        assert!(shift_held());
+        shift_key("key.keyboard.left.shift", false);
+        assert!(shift_held());
+        shift_key("key.keyboard.right.shift", false);
+        assert!(!shift_held());
     }
 
     #[test]
