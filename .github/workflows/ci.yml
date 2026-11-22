@@ -50,7 +50,7 @@ jobs:
         run: |
           cargo horizon-mod build --wasm
           cargo horizon-mod check target/horizon-mod/shulker_peek.hmod
-      - run: cargo fmt --all --check
+      - run: cargo fmt --check  # not --all, which also checks the fetched SDK
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo test --locked
       - uses: actions/upload-artifact@v4
@@ -70,7 +70,9 @@ jobs:
           git -C ../horizon cat-file -e "$(rev horizon_revision)^{commit}"
           git clone https://github.com/horizon-rust/horizon-mixins ../horizon-mixins
           git -C ../horizon-mixins checkout "$(rev horizon_mixins_revision)"
-          git clone --depth 1 https://github.com/horizon-rust/horizon-mods ../horizon-mods
+          # The official native mods as they were when 0.1.0 was released: newer ones use a newer manifest.
+          git clone --filter=blob:none https://github.com/horizon-rust/horizon-mods ../horizon-mods
+          git -C ../horizon-mods checkout 678eb2d1af8845531b9ca82030e9e26d37f083cb
       - name: Stage twice and audit the ASTs
         run: python3 tools/test_stage.py --horizon ../horizon --mixins ../horizon-mixins
       - name: The runtime's and the parity tests inside the real game
