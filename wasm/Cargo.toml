@@ -1,6 +1,6 @@
 [package]
-name = "shulkerpeek-wasm"
-version = "0.1.0"
+name = "shulker-peek"
+version = "0.2.0"
 edition = "2024"
 license = "MIT"
 publish = false
@@ -11,7 +11,7 @@ build = false
 horizon-mod-api = { path = ".horizon/sdk/api/crates/horizon-mod-api" }
 
 [package.metadata.horizon]
-sdk = "f00125f61f794aaa3d4e950d301f353b35b6ee3d"
+sdk = "f037744a79f9982c47876f49c5a3067279f88706"
 
 # A mod is its own project, not a member of the game's workspace.
 [workspace]

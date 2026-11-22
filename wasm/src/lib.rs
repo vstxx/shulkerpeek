@@ -1,5 +1,5 @@
 // ShulkerPeek (WASM port of vstxx's native mod, MIT): a shulker box's contents
-// as a 9 x 3 grid in its tooltip, under the lines the game already shows.
+// as a 9 x 3 grid in its tooltip, under its name, above the game's other lines.
 //
 // The hooks here only translate the game's types into `runtime.rs`' plain
 // ones; the rules (which slots show, where items sit, which tint, which
@@ -28,22 +28,22 @@ const TEXTURE_ID: &str = "minecraft:gui/container/shulker_box";
 /// A slot's colour when a resource pack has no box screen (vanilla's grey).
 const SLOT_FALLBACK: u32 = 0xFF8B_8B8B;
 
-const LABEL_ENABLED: &str = "shulkerpeek_wasm.setting.enabled";
-const LABEL_SHOW: &str = "shulkerpeek_wasm.setting.show";
-const LABEL_EMPTY: &str = "shulkerpeek_wasm.setting.empty";
-const LABEL_COLOR: &str = "shulkerpeek_wasm.setting.color";
+const LABEL_ENABLED: &str = "shulker_peek.setting.enabled";
+const LABEL_SHOW: &str = "shulker_peek.setting.show";
+const LABEL_EMPTY: &str = "shulker_peek.setting.empty";
+const LABEL_COLOR: &str = "shulker_peek.setting.color";
 
 /// The four settings, default value first as in the original.
 fn setting_specs() -> [SettingSpec; 4] {
     [
         SettingSpec::toggle(runtime::KEY_ENABLED, LABEL_ENABLED, true)
-            .tooltip("shulkerpeek_wasm.setting.enabled.tooltip"),
+            .tooltip("shulker_peek.setting.enabled.tooltip"),
         SettingSpec::choice(
             runtime::KEY_SHOW,
             LABEL_SHOW,
             [
-                "shulkerpeek_wasm.setting.show.always",
-                "shulkerpeek_wasm.setting.show.shift",
+                "shulker_peek.setting.show.always",
+                "shulker_peek.setting.show.shift",
             ],
             0,
         ),
@@ -51,8 +51,8 @@ fn setting_specs() -> [SettingSpec; 4] {
             runtime::KEY_EMPTY,
             LABEL_EMPTY,
             [
-                "shulkerpeek_wasm.setting.empty.hidden",
-                "shulkerpeek_wasm.setting.empty.grid",
+                "shulker_peek.setting.empty.hidden",
+                "shulker_peek.setting.empty.grid",
             ],
             0,
         ),
@@ -60,8 +60,8 @@ fn setting_specs() -> [SettingSpec; 4] {
             runtime::KEY_COLOR,
             LABEL_COLOR,
             [
-                "shulkerpeek_wasm.setting.color.plain",
-                "shulkerpeek_wasm.setting.color.dye",
+                "shulker_peek.setting.color.plain",
+                "shulker_peek.setting.color.dye",
             ],
             0,
         ),
@@ -154,7 +154,10 @@ fn plan<'a>(host: &dyn ClientHost, stack: &'a ItemStack) -> Option<(Settings, &'
         return None;
     }
     let list = entries(stack);
-    let grid = Grid::new(list.iter().map(|entry| (entry_slot(entry), holds_item(entry))));
+    let grid = Grid::new(
+        list.iter()
+            .map(|entry| (entry_slot(entry), holds_item(entry))),
+    );
     if grid.is_empty() && !settings.empty {
         return None;
     }
@@ -164,7 +167,8 @@ fn plan<'a>(host: &dyn ClientHost, stack: &'a ItemStack) -> Option<(Settings, &'
 /// The box's slots as a sprite lookup: parsed once, never per frame.
 fn texture_id() -> Option<&'static Identifier> {
     static ID: OnceLock<Option<Identifier>> = OnceLock::new();
-    ID.get_or_init(|| Identifier::parse(TEXTURE_ID).ok()).as_ref()
+    ID.get_or_init(|| Identifier::parse(TEXTURE_ID).ok())
+        .as_ref()
 }
 
 /// What each of the 17 boxes carries: the tint its dye gives the grid.
@@ -183,7 +187,11 @@ impl ItemPart for Peek {
         plan(host, event.stack).map(|_| runtime::component_size())
     }
 
-    fn tooltip_component_draw(&self, host: &dyn ClientHost, event: &mut TooltipComponentDrawEvent<'_>) {
+    fn tooltip_component_draw(
+        &self,
+        host: &dyn ClientHost,
+        event: &mut TooltipComponentDrawEvent<'_>,
+    ) {
         let stack = event.stack;
         let Some((settings, list, grid)) = plan(host, stack) else {
             return;
@@ -254,8 +262,8 @@ impl Hooks for ShulkerPeek {
 mod tests {
     use super::*;
 
-    const EN_US: &str = include_str!("../assets/shulkerpeek_wasm/lang/en_us.json");
-    const FR_FR: &str = include_str!("../assets/shulkerpeek_wasm/lang/fr_fr.json");
+    const EN_US: &str = include_str!("../assets/shulker_peek/lang/en_us.json");
+    const FR_FR: &str = include_str!("../assets/shulker_peek/lang/fr_fr.json");
 
     #[test]
     fn every_setting_passes_the_games_own_check() {
@@ -311,7 +319,10 @@ mod tests {
             }
             for key in keys {
                 for (name, file) in [("en_us", EN_US), ("fr_fr", FR_FR)] {
-                    assert!(file.contains(&format!("\"{key}\"")), "{key} missing in {name}");
+                    assert!(
+                        file.contains(&format!("\"{key}\"")),
+                        "{key} missing in {name}"
+                    );
                 }
             }
         }
@@ -320,9 +331,7 @@ mod tests {
     #[test]
     fn a_slot_that_is_not_a_byte_is_past_the_box() {
         assert_eq!(entry_slot(&Tag::Int(3)), u8::MAX); // no `slot` key at all
-        let entry = |slot: i32| {
-            Tag::compound(vec![("slot", Tag::Int(slot))])
-        };
+        let entry = |slot: i32| Tag::compound(vec![("slot", Tag::Int(slot))]);
         assert_eq!(entry_slot(&entry(5)), 5);
         assert_eq!(entry_slot(&entry(-1)), u8::MAX);
         assert_eq!(entry_slot(&entry(300)), u8::MAX);

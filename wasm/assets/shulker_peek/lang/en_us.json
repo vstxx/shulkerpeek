@@ -1,0 +1,13 @@
+{
+  "shulker_peek.setting.enabled": "ShulkerPeek",
+  "shulker_peek.setting.enabled.tooltip": "Turns the contents grid in shulker box tooltips on or off.",
+  "shulker_peek.setting.show": "Show contents",
+  "shulker_peek.setting.show.always": "Always",
+  "shulker_peek.setting.show.shift": "While holding Shift",
+  "shulker_peek.setting.empty": "Empty boxes",
+  "shulker_peek.setting.empty.hidden": "No grid",
+  "shulker_peek.setting.empty.grid": "Show the empty grid",
+  "shulker_peek.setting.color": "Grid colour",
+  "shulker_peek.setting.color.plain": "Plain",
+  "shulker_peek.setting.color.dye": "The box's dye"
+}

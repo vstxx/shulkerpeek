@@ -1,0 +1,13 @@
+{
+  "shulker_peek.setting.enabled": "ShulkerPeek",
+  "shulker_peek.setting.enabled.tooltip": "Active ou désactive la grille de contenu dans les infobulles des boîtes de Shulker.",
+  "shulker_peek.setting.show": "Afficher le contenu",
+  "shulker_peek.setting.show.always": "Toujours",
+  "shulker_peek.setting.show.shift": "En maintenant Shift",
+  "shulker_peek.setting.empty": "Boîtes vides",
+  "shulker_peek.setting.empty.hidden": "Pas de grille",
+  "shulker_peek.setting.empty.grid": "Afficher la grille vide",
+  "shulker_peek.setting.color": "Couleur de la grille",
+  "shulker_peek.setting.color.plain": "Normale",
+  "shulker_peek.setting.color.dye": "Teinte de la boîte"
+}

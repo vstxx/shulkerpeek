@@ -8,9 +8,6 @@
 
 use std::sync::atomic::{AtomicU8, Ordering};
 
-/// The mod's id (its settings folder and its row in Options > Mods).
-pub const ID: &str = "shulkerpeek_wasm";
-
 /// A shulker box's slots (`ShulkerBoxBlockEntity.CONTAINER_SIZE`), as its
 /// screen lays them out.
 pub const COLUMNS: usize = 9;
@@ -51,11 +48,6 @@ pub const SHULKER_BOXES: [&str; 17] = [
     "minecraft:red_shulker_box",
     "minecraft:black_shulker_box",
 ];
-
-/// Whether an item id is a shulker box: the plain one and the 16 dyed ones.
-pub fn is_shulker_box(item: &str) -> bool {
-    item.ends_with("shulker_box")
-}
 
 /// The box's 27 slots: for each, the index of the component entry it shows.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -248,25 +240,8 @@ mod tests {
     use super::*;
 
     #[test]
-    fn shulker_boxes_are_the_plain_and_the_sixteen_dyed() {
-        assert!(is_shulker_box("minecraft:shulker_box"));
-        for (dye, _) in DYES {
-            assert!(is_shulker_box(&format!("minecraft:{dye}_shulker_box")));
-        }
-        for other in [
-            "minecraft:chest",
-            "minecraft:barrel",
-            "minecraft:bundle",
-            "",
-        ] {
-            assert!(!is_shulker_box(other), "{other}");
-        }
-    }
-
-    #[test]
     fn the_registered_ids_are_exactly_the_seventeen_boxes() {
         assert_eq!(SHULKER_BOXES.len(), 17);
-        assert!(SHULKER_BOXES.iter().all(|id| is_shulker_box(id)));
         let mut unique = SHULKER_BOXES.to_vec();
         unique.sort_unstable();
         unique.dedup();
