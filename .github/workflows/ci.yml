@@ -50,7 +50,7 @@ jobs:
         run: |
           cargo horizon-mod build --wasm
           cargo horizon-mod check target/horizon-mod/shulker_peek.hmod
-      - run: cargo fmt --check  # not --all, which also checks the fetched SDK
+      - run: rustfmt --edition 2024 --check src/lib.rs  # cargo fmt would check the fetched SDK too
       - run: cargo clippy --locked --all-targets -- -D warnings
       - run: cargo test --locked
       - uses: actions/upload-artifact@v4

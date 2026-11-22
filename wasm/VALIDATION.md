@@ -23,5 +23,10 @@ In game on Nightly 2026-11-22 (`2b77287de099c9316278ba7ac4d83590fdb7ef30`), driv
 | Survival inventory, creative inventory, chest | Grid shows |
 | GUI scale auto and 1; near the bottom edge | Stays on screen |
 
+The released file (SHA-256 `2b426e2859d3d4221299a6a1197b0d0601cccd766eaace1a73957045db634cf4`, built from a clean
+clone) was run through the survival inventory cases and all four settings. The black and pink boxes, the creative
+inventory, the chest, GUI scale 1 and the restart ran on an earlier build the same day, which differed only in a
+comment, the packed README and build paths or SDK formatting.
+
 Not tested: running on `f037744` itself, Linux and macOS, LAN guests and remote servers, resource packs, the other
 dye colours in game, and other mods installed alongside.

@@ -11,7 +11,7 @@ side = "client"
 capabilities = ["registries"]
 
 [wasm]
-sha512 = "80deb3e1ce233323de186a08aa4c0ff40551ca3e3157460242496035bdc6a30b2e3425c0ab5b6620c6b338e4c5438303bce7961fd05a330621fe4de47b9fe034"
+sha512 = "b516d59b099c4c865c1baf63c071eb6978471ec9fe49fdc47d9f55a79ea8863eb136984f19687a7d6968e73e3c9d3d482dc650ea4b0b3ffd01894eb4c02fdc61"
 toolchain = "1.99.1 58cf8f9c35b355199727627d07ae34a4e2846d67"
 
 # The `[wasm]` table (sha512 and toolchain) is written by
