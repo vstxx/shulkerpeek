@@ -1,0 +1,17 @@
+[package]
+name = "shulkerpeek-wasm"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+description = "ShulkerPeek: a shulker box's contents as a 9 x 3 grid in its tooltip (WebAssembly port of vstxx's native mod)."
+build = false
+
+[dependencies]
+horizon-mod-api = { path = ".horizon/sdk/api/crates/horizon-mod-api" }
+
+[package.metadata.horizon]
+sdk = "f00125f61f794aaa3d4e950d301f353b35b6ee3d"
+
+# A mod is its own project, not a member of the game's workspace.
+[workspace]

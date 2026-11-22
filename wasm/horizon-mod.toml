@@ -1,0 +1,14 @@
+id = "shulkerpeek_wasm"
+name = "ShulkerPeek"
+version = "0.1.0"
+description = "A shulker box's contents as a 9 x 3 grid in its tooltip, as the box's own screen shows them. WebAssembly port of vstxx's ShulkerPeek."
+authors = ["vstxx (original ShulkerPeek)", "WebAssembly port"]
+license = "MIT"
+license_url = "https://github.com/vstxx/shulkerpeek/blob/main/LICENSE"
+homepage = "https://github.com/vstxx/shulkerpeek"
+api = "0.2"
+side = "client"
+capabilities = ["registries"]
+
+# The `[wasm]` table (sha512 and toolchain) is written by
+# `cargo horizon-mod build --wasm`; it is not edited by hand.
